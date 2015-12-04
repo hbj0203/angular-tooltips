@@ -25,6 +25,13 @@
   </head>
   <body id="demo-container" ng-controller="DemoCtrl as demoCtrl">
     <div>
+      <i class="fa fa-bolt"
+      tooltips
+      tooltip-append-to-body="true"
+      tooltip-template="I'm a tooltip that is bounded on body!"></i>
+    </div>
+
+    <div>
       <i class="fa fa-code"
       tooltips
       tooltip-hidden="{{ demoCtrl.isHidden }}"

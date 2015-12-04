@@ -6,7 +6,7 @@
  * http://720kb.github.io/angular-tooltips
  * 
  * MIT license
- * Wed Dec 02 2015
+ * Fri Dec 04 2015
  */
 /*global angular,window*/
 (function withAngular(angular, window) {
@@ -233,6 +233,16 @@
 
     throw new Error('You must provide a position');
   }
+  , getStyle = function getStyle(anElement) {
+
+  	if(window.getComputedStyle) {
+
+  		return window.getComputedStyle(anElement, '');
+  	} else if(anElement.currentStyle) {
+
+  		return anElement.currentStyle;
+  	}
+  }
   , tooltipConfigurationProvider = function tooltipConfigurationProvider() {
 
     var tooltipConfiguration = {
@@ -243,7 +253,8 @@
       'smart': false,
       'closeButton': false,
       'size': '',
-      'speed': 'steady'
+      'speed': 'steady',
+      'appendToBody': false
     };
 
     return {
@@ -408,11 +419,70 @@
           }
         }
 
-        tipElement.removeClass('_hidden');
-        if (event &&
-          attrs.tooltipHidden !== 'true') {
+        if (attrs.tooltipAppendToBody) {
 
-          element.addClass('active');
+          var tipElementStyle = getStyle(tipElement[0])
+            , boundingData = tipElement[0].getBoundingClientRect()
+            , exradicatedTipElement = angular.copy(tipElement)
+            , tipsInBody = window.document.querySelectorAll('._exradicated-tooltip')
+            , aTipInBody
+            , tipsInBodyIndex = 0
+            , tipsInBodyLength = tipsInBody.length
+            , angularizedElement
+            , tipStyleIndex = 0
+            , tipStyleLength = tipElementStyle.length
+            , aStyleKey
+            , cssToSet = {};
+
+          tipElement.removeClass('_hidden');
+          exradicatedTipElement.removeClass('_hidden');
+          exradicatedTipElement.data('_tooltip-parent', element);
+          for (; tipsInBodyIndex < tipsInBodyLength; tipsInBodyIndex += 1) {
+
+            aTipInBody = tipsInBody.item(tipsInBodyIndex);
+            if (aTipInBody) {
+
+              angularizedElement = angular.element(aTipInBody);
+              if (angularizedElement.data('_tooltip-parent') &&
+                angularizedElement.data('_tooltip-parent') === element) {
+
+                angularizedElement.remove();
+              }
+            }
+          }
+
+          for (tipStyleIndex; tipStyleIndex < tipStyleLength; tipStyleIndex += 1) {
+
+            aStyleKey = tipElementStyle[tipStyleIndex];
+            if (aStyleKey &&
+              aStyleKey !== 'position' &&
+              aStyleKey !== 'display' &&
+              aStyleKey !== 'opacity' &&
+              aStyleKey !== 'z-index' &&
+              tipElementStyle.getPropertyValue(aStyleKey)) {
+
+              cssToSet[aStyleKey] = tipElementStyle.getPropertyValue(aStyleKey);
+            }
+          }
+          cssToSet.bottom = boundingData.bottom + 'px';
+          cssToSet.height = boundingData.height + 'px';
+          cssToSet.left = boundingData.left + 'px';
+          cssToSet.right = boundingData.right + 'px';
+          cssToSet.top = boundingData.top + 'px';
+          cssToSet.width = boundingData.width + 'px';
+
+          exradicatedTipElement.addClass('_exradicated-tooltip');
+          exradicatedTipElement.css(cssToSet);
+
+          angular.element(window.document.body).append(exradicatedTipElement);
+        } else {
+
+          tipElement.removeClass('_hidden');
+          if (event &&
+            attrs.tooltipHidden !== 'true') {
+
+            element.addClass('active');
+          }
         }
       }
       , onTooltipHide = function onTooltipHide() {
@@ -574,6 +644,7 @@
       attrs.tooltipCloseButton = attrs.tooltipCloseButton === 'true' || tooltipsConf.closeButton;
       attrs.tooltipSize = attrs.tooltipSize || tooltipsConf.size;
       attrs.tooltipSpeed = attrs.tooltipSpeed || tooltipsConf.speed;
+      attrs.tooltipAppendToBody = attrs.tooltipAppendToBody === 'true' || tooltipsConf.appendToBody;
       resizeObserver.add(function registerResize() {
 
         calculateIfMultiLine();
